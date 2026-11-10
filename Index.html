@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subway Surfers 2.0 | O Futuro dos Games</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { background: #09090b; color: #fff; font-family: 'Orbitron', sans-serif; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .bg-glow { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, rgba(0, 255, 200, 0.1) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255, 0, 150, 0.1) 0%, transparent 50%); z-index: -1; pointer-events: none; }
+        header { width: 100%; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0, 255, 200, 0.2); backdrop-filter: blur(10px); }
+        .logo { font-size: 24px; font-weight: 900; color: #00ffc8; text-shadow: 0 0 10px rgba(0, 255, 200, 0.7); letter-spacing: 2px; }
+        .logo span { color: #ff007f; text-shadow: 0 0 10px rgba(255, 0, 127, 0.7); }
+        .btn-neon { background: transparent; border: 2px solid #00ffc8; color: #00ffc8; padding: 10px 24px; font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 8px; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 10px rgba(0, 255, 200, 0.2); }
+        .btn-neon:hover { background: #00ffc8; color: #09090b; box-shadow: 0 0 20px rgba(0, 255, 200, 0.8); transform: scale(1.05); }
+        .game-container { margin-top: 40px; position: relative; border: 2px solid rgba(0, 255, 200, 0.3); border-radius: 16px; overflow: hidden; box-shadow: 0 0 30px rgba(0, 255, 200, 0.1); background: #000; }
+        canvas { display: block; background: linear-gradient(to bottom, #1a1a24, #09090b); max-width: 100%; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); transition: opacity 0.3s; }
+        .overlay h2 { font-size: 40px; color: #ff007f; text-shadow: 0 0 20px #ff007f; margin-bottom: 20px; letter-spacing: 5px; }
+        .overlay p { font-size: 18px; color: #00ffc8; margin-bottom: 30px; text-align: center; padding: 0 20px; }
+        .hidden { opacity: 0; pointer-events: none; }
+        .mobile-controls { display: none; width: 100%; justify-content: space-between; padding: 20px; margin-top: 20px; }
+        @media (max-width: 768px) { .mobile-controls { display: flex; } header { padding: 15px; flex-direction: column; gap: 10px; } .logo { font-size: 18px; } .overlay h2 { font-size: 30px; } }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <header>
+        <div class="logo">SUBWAY<span>SURFERS</span> 2.0</div>
+        <button class="btn-neon" onclick="startGame()">Jogar Agora</button>
+    </header>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <div class="overlay" id="startScreen">
+            <h2>PRONTO?</h2>
+            <p>Pule os obstáculos com ESPAÇO ou SETA PRA CIMA</p>
+            <button class="btn-neon" onclick="startGame()">INICIAR</button>
+        </div>
+        <div class="overlay hidden" id="gameOverScreen">
+            <h2>GAME OVER</h2>
+            <p id="finalScore">Sua pontuação: 0</p>
+            <button class="btn-neon" onclick="startGame()">TENTAR NOVAMENTE</button>
+        </div>
+    </div>
+    <div class="mobile-controls">
+        <button class="btn-neon" style="width: 45%;" ontouchstart="jump()">PULAR</button>
+        <button class="btn-neon" style="width: 45%;" ontouchstart="resetGame()">REINICIAR</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreText = document.getElementById('finalScore');
+        let gameLoop, isPlaying = false, score = 0, speed = 6, frames = 0;
+        const player = { x: 100, y: 300, width: 40, height: 60, vy: 0, gravity: 0.6, jumpForce: -12, isJumping: false, color: '#00ffc8' };
+        let obstacles = [];
+        function resetGame() {
+            score = 0; speed = 6; frames = 0; obstacles = []; player.y = 300; player.vy = 0; player.isJumping = false; isPlaying = true;
+            gameOverScreen.classList.add('hidden'); startScreen.classList.add('hidden');
+            if (gameLoop) cancelAnimationFrame(gameLoop); gameLoop = requestAnimationFrame(update);
+        }
+        function startGame() { resetGame(); }
+        function jump() { if (!player.isJumping && isPlaying) { player.vy = player.jumpForce; player.isJumping = true; } }
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (!isPlaying) startGame(); else jump();
+            }
+        });
+        function drawPlayer() {
+            ctx.fillStyle = player.color; ctx.shadowBlur = 20; ctx.shadowColor = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = '#09090b'; ctx.shadowBlur = 0;
+            ctx.fillRect(player.x + 25, player.y + 15, 8, 8);
+        }
+        function drawObstacles() {
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#ff007f'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff007f';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; ctx.shadowBlur = 0;
+                ctx.fillRect(obs.x + 5, obs.y + 5, obs.width - 10, obs.height - 10);
+            });
+        }
+        function drawGround() {
+            ctx.fillStyle = '#222'; ctx.shadowBlur = 0; ctx.fillRect(0, 360, canvas.width, 40);
+            ctx.strokeStyle = '#00ffc8'; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = '#00ffc8';
+            ctx.beginPath(); ctx.moveTo(0, 360); ctx.lineTo(canvas.width, 360); ctx.stroke();
+            let offset = (frames * speed) % 50;
+            for(let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath(); ctx.moveTo(i - offset, 380); ctx.lineTo(i - offset + 20, 380); ctx.stroke();
+            }
+        }
+        function drawScore() {
+            ctx.fillStyle = '#fff'; ctx.font = '24px Orbitron'; ctx.shadowBlur = 10; ctx.shadowColor = '#fff'; ctx.textAlign = 'right';
+            ctx.fillText('SCORE: ' + Math.floor(score), canvas.width - 20, 40);
+            ctx.fillStyle = '#ff007f'; ctx.font = '14px Orbitron';
+            ctx.fillText('SPEED: ' + Math.floor(speed) + 'x', canvas.width - 20, 65);
+        }
+        function update() {
+            if (!isPlaying) return;
+            frames++; score += 0.1;
+            if (frames % 600 === 0) speed += 0.5;
+            player.y += player.vy; player.vy += player.gravity;
+            if (player.y >= 300) { player.y = 300; player.vy = 0; player.isJumping = false; }
+            if (frames % 80 === 0) {
+                let obsHeight = Math.random() > 0.5 ? 60 : 100;
+                obstacles.push({ x: canvas.width, y: 360 - obsHeight, width: 30, height: obsHeight });
+            }
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i]; obs.x -= speed;
+                if (player.x < obs.x + obs.width && player.x + player.width > obs.x && player.y < obs.y + obs.height && player.y + player.height > obs.y) {
+                    gameOver(); return;
+                }
+                if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGround(); drawObstacles(); drawPlayer(); drawScore();
+            gameLoop = requestAnimationFrame(update);
+        }
+        function gameOver() {
+            isPlaying = false;
+            finalScoreText.innerText = "Sua pontuação: " + Math.floor(score);
+            gameOverScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
